@@ -1,0 +1,356 @@
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+@SuppressWarnings("serial")
+public class ConnectFour extends JPanel {
+
+    private enum GameStatus {RED_WON, YELLOW_WON, DRAW, RED_TURN, YELLOW_TURN};
+
+    private static final int ROWS = 6;
+    private static final int COLS = 7;
+    private static final int CONNECT = 4;
+
+    // Values to be used for button text within the board.
+    private static String RED = "R";
+    private static String YELLOW = "Y";
+    private static String BLANK = " ";
+
+    // A 2D array of JButton objects, representing the Connect Four grid.
+    private JButton[][] _board;
+
+    private RedPlayerTurn redPlayer;
+    private YellowPlayerTurn yellowPlayer;
+    private GameStatus status;
+    JLabel statusLabel;
+
+    private GameSubject subject = new GameSubject();
+
+    public ConnectFour() {
+        redPlayer = new RedPlayerTurn(this);
+        yellowPlayer = new YellowPlayerTurn(this);
+        status = GameStatus.RED_TURN;
+        statusLabel = new JLabel("Starting a new game.");        
+        // Build the GUI.
+        buildGUI();
+
+        subject.addObserver(new StatusObserver(statusLabel));
+    }
+
+    private void buildGUI() {
+        // Initialize the board.
+        _board = new JButton[ROWS][COLS];
+        JPanel panel = new JPanel(new GridLayout(ROWS, COLS));
+        panel.setPreferredSize(new Dimension(COLS * 100, ROWS * 100));
+        panel.setBackground(Color.WHITE);
+
+        for(int row = 0; row < ROWS; row++) {
+            for(int col = 0; col < COLS; col++) {
+                JButton btn = new JButton(BLANK);
+                btn.setBackground(Color.LIGHT_GRAY);
+                final int selectedColumn = col;
+                btn.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        handleCellClick(selectedColumn);
+                    }
+                });
+                _board[row][col] = btn;
+                panel.add(btn);
+            }
+        }
+
+        add(panel, BorderLayout.CENTER);
+        add(statusLabel, BorderLayout.SOUTH);
+    }
+
+    public JButton getCell(int row, int col) {
+        return _board[row][col];
+    }
+
+    public void setRedTurn(boolean value) {
+        status = value ? GameStatus.RED_TURN : GameStatus.YELLOW_TURN;
+    }
+
+    public JLabel getStatusLabel() {
+        return statusLabel;
+    }
+    
+    private void handleCellClick(int col) {
+        if (status == GameStatus.RED_TURN) {
+            redPlayer.takeTurn(col);
+        } else if (status == GameStatus.YELLOW_TURN) {
+            yellowPlayer.takeTurn(col);
+        }
+    }
+
+    public void updateStatus() {
+        status = getGameStatus();
+        subject.notifyObservers(status);
+    }
+
+    public static void main(String[] args) {
+        javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                // TODO: Create and configure a JFrame to display the GUI.
+                // Make class ConnectFour extend JPanel so that a
+                // ConnectFour object can be added to the JFrame.
+                JFrame frame = new JFrame("Connect Four");
+                ConnectFour gamePanel = new ConnectFour();
+
+                frame.setLayout(new BorderLayout());
+                frame.add(gamePanel, BorderLayout.CENTER);
+                frame.pack();
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setVisible(true);
+            }
+        });
+    }
+
+    // Helper method to determine the status of the Connect Four game.
+    private GameStatus getGameStatus() {
+        List<LineComposite> lines = new ArrayList<>();
+
+        // Horizontal check
+        for(int row = 0; row < ROWS; row++) {
+            for(int col = 0; col <= COLS - 4; col++) {
+                lines.add(new LineComposite(Arrays.asList(
+                    new Cell(_board[row][col].getText()),
+                    new Cell(_board[row][col+1].getText()),
+                    new Cell(_board[row][col+2].getText()),
+                    new Cell(_board[row][col+3].getText())
+                )));    
+            }
+        }
+
+        // Vertical check
+        for(int col = 0; col < COLS; col++) {
+            for(int row = 0; row <= ROWS - 4; row++) {
+                lines.add(new LineComposite(Arrays.asList(
+                    new Cell(_board[row][col].getText()),
+                    new Cell(_board[row+1][col].getText()),
+                    new Cell(_board[row+2][col].getText()),
+                    new Cell(_board[row+3][col].getText())
+                )));  
+            }
+        }
+
+        // Diagonal check (top-left to bottom-right)
+        for(int row = 0; row <= ROWS - 4; row++) {
+            for(int col = 0; col <= COLS - 4; col++) {
+                    lines.add(new LineComposite(Arrays.asList(
+                    new Cell(_board[row][col].getText()),
+                    new Cell(_board[row + 1][col + 1].getText()),
+                    new Cell(_board[row + 2][col + 2].getText()),
+                    new Cell(_board[row + 3][col + 3].getText())
+                )));
+            }
+        }
+
+        // Diagonal check (bottom-left to top-right)
+        for(int row = 3; row < ROWS; row++) {
+            for(int col = 0; col <= COLS - 4; col++) {
+                    lines.add(new LineComposite(Arrays.asList(
+                    new Cell(_board[row][col].getText()),
+                    new Cell(_board[row - 1][col + 1].getText()),
+                    new Cell(_board[row - 2][col + 2].getText()),
+                    new Cell(_board[row - 3][col + 3].getText())
+                )));
+            }
+        }
+
+        //Check for a winning line
+        for (LineComposite line : lines) {
+            if (line.checkWin()) {
+                String winner = line.getFirstValue();
+                return winner.equals(RED) ? GameStatus.RED_WON : GameStatus.YELLOW_WON;
+            }
+        }
+
+        //Check if board is full
+        for (int col = 0; col < COLS; col++) {
+            if (_board[0][col].getText().equals(BLANK)) {
+                return status;
+            }
+        }
+
+        return GameStatus.DRAW;
+    }
+
+    interface GameComponent {
+        boolean checkWin();
+    }
+
+    class Cell implements GameComponent {
+        private String value;
+
+        public Cell(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        public boolean checkWin() {
+            return false;
+        }
+    }
+
+    class LineComposite implements GameComponent {
+        private List<Cell> components;
+
+        public LineComposite(List<Cell> components) {
+            if (components.size() != CONNECT) { throw new IllegalArgumentException("Invalid Line Size"); }
+
+            this.components = components;
+        }
+
+        public boolean checkWin() {
+            String first = components.get(0).getValue();
+            if (first.equals(" ")) {
+                return false;
+            }
+
+            for (Cell c : components) {
+                if (!c.getValue().equals(first)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public String getFirstValue() {
+            return components.get(0).getValue();
+        }
+    }
+
+    abstract class PlayerTurn {
+        protected int selectedColumn;
+        protected ConnectFour game;
+
+        public PlayerTurn(ConnectFour game) {
+            this.game = game;
+        }
+
+        public final void takeTurn(int col) {
+            this.selectedColumn = col;
+
+            if (!dropDisc()) {
+                return;
+            }
+
+            switchTurns();
+            game.updateStatus();
+            
+        }
+
+        protected abstract boolean dropDisc();
+        protected abstract void switchTurns();
+    }
+
+    class RedPlayerTurn extends PlayerTurn {
+        RedPlayerTurn(ConnectFour game) {
+            super(game);
+        }
+
+        protected boolean dropDisc() {
+            for (int row = ConnectFour.ROWS - 1; row >= 0; row--) {
+                JButton cell = game.getCell(row, selectedColumn);
+                if (cell.getBackground().equals(Color.LIGHT_GRAY)) {
+                    cell.setBackground(Color.RED);
+                    cell.setText(ConnectFour.RED);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        protected void switchTurns() {
+            game.setRedTurn(false);
+        }
+    }
+
+    class YellowPlayerTurn extends PlayerTurn {
+        YellowPlayerTurn(ConnectFour game) {
+            super(game);
+        }
+
+        protected boolean dropDisc() {
+            for (int row = ConnectFour.ROWS - 1; row >= 0; row--) {
+                JButton cell = game.getCell(row, selectedColumn);
+                if (cell.getBackground().equals(Color.LIGHT_GRAY)) {
+                    cell.setBackground(Color.YELLOW);
+                    cell.setText(ConnectFour.YELLOW);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        protected void switchTurns() {
+            game.setRedTurn(true);
+        }
+    }
+
+    interface GameObserver {
+        void update(GameStatus status);
+    }
+
+    class GameSubject {
+        private List<GameObserver> observers = new ArrayList<GameObserver>();
+
+        public void addObserver(GameObserver observer) {
+            observers.add(observer);
+        }
+
+        public void notifyObservers(GameStatus status) {
+            for (GameObserver o : observers) {
+                o.update(status);
+            }
+        }
+    }
+
+    class StatusObserver implements GameObserver {
+        private JLabel statusLabel;
+
+        public StatusObserver(JLabel label) {
+            this.statusLabel = label;
+        }
+
+        public void update(GameStatus status) {
+            switch(status) {
+                case RED_WON:
+                    statusLabel.setText("Red Wins!");
+                    break;
+                case YELLOW_WON:
+                    statusLabel.setText("Yellow Wins!");
+                    break;
+                case DRAW:
+                    statusLabel.setText("Everyone is a winner!");
+                    break;
+                case RED_TURN:
+                    statusLabel.setText("Red\'s Turn.");
+                    break;
+                case YELLOW_TURN:
+                    statusLabel.setText("Yellow\'s Turn.");
+                    break;
+                default:
+                    statusLabel.setText("Invalid Status!");
+                    break;
+            }
+        }
+    }
+}
