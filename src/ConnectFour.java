@@ -17,13 +17,15 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-@SuppressWarnings("serial")
 public class ConnectFour extends JPanel {
 
     private enum GameStatus {RED_WON, YELLOW_WON, DRAW, RED_TURN, YELLOW_TURN};
+
+    private static final Font CONTROL_FONT = new Font("SansSerif", Font.BOLD, 16);
 
     private static final int ROWS = 6;
     private static final int COLS = 7;
@@ -45,6 +47,7 @@ public class ConnectFour extends JPanel {
     private GameStatus status;
 
     private JLabel statusLabel;
+    private JButton newGameButton;
 
     private GameSubject subject = new GameSubject();
 
@@ -64,9 +67,9 @@ public class ConnectFour extends JPanel {
     private void buildGUI() {
         // Initialize the board.
         _board = new JButton[ROWS][COLS];
-        JPanel panel = new JPanel(new GridLayout(ROWS, COLS));
-        panel.setPreferredSize(new Dimension(COLS * 100, ROWS * 100));
-        panel.setBackground(Color.WHITE);
+        JPanel boardPanel = new JPanel(new GridLayout(ROWS, COLS));
+        boardPanel.setPreferredSize(new Dimension(COLS * 100, ROWS * 100));
+        boardPanel.setBackground(Color.WHITE);
 
         try {
             redDiscIcon = new ImageIcon(getClass().getResource("./resources/red_disc.png"));
@@ -95,7 +98,7 @@ public class ConnectFour extends JPanel {
                     }
                 });
                 _board[row][col] = btn;
-                panel.add(btn);
+                boardPanel.add(btn);
             }
         }
 
@@ -103,11 +106,25 @@ public class ConnectFour extends JPanel {
         statusLabel.setPreferredSize(new Dimension(COLS * 100, 30));
         statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
         statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); 
-        statusLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        statusLabel.setFont(CONTROL_FONT);
         statusLabel.setForeground(Color.DARK_GRAY);
 
-        add(panel, BorderLayout.CENTER);
-        add(statusLabel, BorderLayout.SOUTH);
+        newGameButton = new JButton("New Game");
+        newGameButton.setPreferredSize(new Dimension(140, 40));
+        newGameButton.setMargin(new Insets(10, 20, 10, 20));
+        newGameButton.setFont(CONTROL_FONT);
+        newGameButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                resetGame();
+            }
+        });
+
+        JPanel controlPanel = new JPanel(new BorderLayout());
+        controlPanel.add(statusLabel, BorderLayout.CENTER);
+        controlPanel.add(newGameButton, BorderLayout.EAST);
+
+        add(boardPanel, BorderLayout.CENTER);
+        add(controlPanel, BorderLayout.SOUTH);
     }
 
     public JButton getCell(int row, int col) {
@@ -130,6 +147,18 @@ public class ConnectFour extends JPanel {
         }
     }
 
+    private void resetGame() {
+        for(int row = 0; row < ROWS; row++) {
+            for(int col = 0; col < COLS; col++) {
+                JButton btn = _board[row][col];
+                btn.putClientProperty("state", EMPTY);
+                btn.setIcon(null);
+            }
+        }
+        status = GameStatus.RED_TURN;
+        subject.notifyObservers(status);
+    }
+
     public void updateStatus() {
         status = getGameStatus();
         subject.notifyObservers(status);
@@ -146,6 +175,7 @@ public class ConnectFour extends JPanel {
                 frame.add(gamePanel, BorderLayout.CENTER);
                 frame.pack();
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setResizable(false);
                 frame.setVisible(true);
             }
         });
