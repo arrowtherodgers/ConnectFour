@@ -101,7 +101,8 @@ public class ConnectFour extends JPanel {
                 boardPanel.add(btn);
             }
         }
-
+        
+        //Bottom-Left text for displaying game status
         statusLabel = new JLabel("Game start!");
         statusLabel.setPreferredSize(new Dimension(COLS * 100, 30));
         statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
@@ -109,6 +110,7 @@ public class ConnectFour extends JPanel {
         statusLabel.setFont(CONTROL_FONT);
         statusLabel.setForeground(Color.DARK_GRAY);
 
+        //Bottom-Right button to reset the game state
         newGameButton = new JButton("New Game");
         newGameButton.setPreferredSize(new Dimension(140, 40));
         newGameButton.setMargin(new Insets(10, 20, 10, 20));
@@ -147,6 +149,7 @@ public class ConnectFour extends JPanel {
         }
     }
 
+    //Game state is reset by clearing board and setting turn to Red
     private void resetGame() {
         for(int row = 0; row < ROWS; row++) {
             for(int col = 0; col < COLS; col++) {
@@ -189,7 +192,7 @@ public class ConnectFour extends JPanel {
         for(int row = 0; row < ROWS; row++) {
             for(int col = 0; col <= COLS - 4; col++) {
                 lines.add(new LineComposite(Arrays.asList(
-                    new Cell((String)_board[row][col].getClientProperty("state")),
+                    new Cell(_board[row][col].getClientProperty("state")),
                     new Cell(_board[row][col+1].getClientProperty("state")),
                     new Cell(_board[row][col+2].getClientProperty("state")),
                     new Cell(_board[row][col+3].getClientProperty("state"))
@@ -251,6 +254,11 @@ public class ConnectFour extends JPanel {
         return GameStatus.DRAW;
     }
 
+    /**
+     * COMPOSITE PATTERN: Individual cells and lines are treated uniformly by implementing GameComponent Interface
+     * checkWin() method returns false for leaves and for the composite checks if all children have the same value
+     * Cell value set to ClientProperty of corresponding JButton
+     */
     interface GameComponent {
         boolean checkWin();
     }
@@ -282,7 +290,7 @@ public class ConnectFour extends JPanel {
 
         public boolean checkWin() {
             Object first = components.get(0).getValue();
-            if (first.equals(" ")) {
+            if (first.equals(EMPTY)) {
                 return false;
             }
 
@@ -299,6 +307,12 @@ public class ConnectFour extends JPanel {
             return components.get(0).getValue();
         }
     }
+
+    /**
+     * TEMPLATE PATTERN: Abstract PlayerTurn provides template alogorithm for individual player turns. 
+     * RedPlayerTurn and YellowPlayer turn extend the base class with specific implementations
+     * Could be used to make a ComputerPlayer
+     */
 
     abstract class PlayerTurn {
         protected int selectedColumn;
@@ -368,6 +382,10 @@ public class ConnectFour extends JPanel {
         }
     }
 
+    /**
+     *  OBSERVER PATTERN: GameSubject manages a list of observers and notifies them when the game status changes
+     *  The GameObserver interface is implemented by different concrete observers
+     */
     interface GameObserver {
         void update(GameStatus status);
     }
