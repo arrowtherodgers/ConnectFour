@@ -15,6 +15,7 @@ import javax.swing.SwingConstants;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Insets;
@@ -47,6 +48,7 @@ public class ConnectFour extends JPanel {
     private GameStatus status;
 
     private JLabel statusLabel;
+    private JLabel scoreLabel;
     private JButton newGameButton;
 
     private GameSubject subject = new GameSubject();
@@ -61,6 +63,7 @@ public class ConnectFour extends JPanel {
         buildGUI();
 
         subject.addObserver(new StatusObserver(statusLabel));
+        subject.addObserver(new ScoreObserver(scoreLabel));
         subject.addObserver(new ConsoleObserver());
     }
 
@@ -104,15 +107,23 @@ public class ConnectFour extends JPanel {
         
         //Bottom-Left text for displaying game status
         statusLabel = new JLabel("Game start!");
-        statusLabel.setPreferredSize(new Dimension(COLS * 100, 30));
+        statusLabel.setPreferredSize(new Dimension(COLS * 40, 30));
         statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
         statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); 
         statusLabel.setFont(CONTROL_FONT);
         statusLabel.setForeground(Color.DARK_GRAY);
 
+        //Bottom-Center text for tracking score
+        scoreLabel = new JLabel("Red: 0 | Yellow: 0");
+        scoreLabel.setPreferredSize(new Dimension(COLS * 40, 30));
+        scoreLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        scoreLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); 
+        scoreLabel.setFont(CONTROL_FONT);
+        scoreLabel.setForeground(Color.DARK_GRAY);
+
         //Bottom-Right button to reset the game state
         newGameButton = new JButton("New Game");
-        newGameButton.setPreferredSize(new Dimension(140, 40));
+        newGameButton.setPreferredSize(new Dimension(140, 30));
         newGameButton.setMargin(new Insets(10, 20, 10, 20));
         newGameButton.setFont(CONTROL_FONT);
         newGameButton.addActionListener(new ActionListener() {
@@ -122,8 +133,16 @@ public class ConnectFour extends JPanel {
         });
 
         JPanel controlPanel = new JPanel(new BorderLayout());
-        controlPanel.add(statusLabel, BorderLayout.CENTER);
-        controlPanel.add(newGameButton, BorderLayout.EAST);
+        JPanel _left = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        _left.add(statusLabel);
+        JPanel _center = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        _center.add(scoreLabel);
+        JPanel _right = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        _right.add(newGameButton);
+
+        controlPanel.add(_left, BorderLayout.WEST);
+        controlPanel.add(_center, BorderLayout.CENTER);
+        controlPanel.add(_right, BorderLayout.EAST);
 
         add(boardPanel, BorderLayout.CENTER);
         add(controlPanel, BorderLayout.SOUTH);
