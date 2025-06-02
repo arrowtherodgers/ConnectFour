@@ -1,21 +1,31 @@
+package src;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-@SuppressWarnings("serial")
 public class ConnectFour extends JPanel {
 
     private enum GameStatus {RED_WON, YELLOW_WON, DRAW, RED_TURN, YELLOW_TURN};
+
+    private static final Font CONTROL_FONT = new Font("SansSerif", Font.BOLD, 16);
 
     private static final int ROWS = 6;
     private static final int COLS = 7;
@@ -24,7 +34,10 @@ public class ConnectFour extends JPanel {
     // Values to be used for button text within the board.
     private static String RED = "R";
     private static String YELLOW = "Y";
-    private static String BLANK = " ";
+    private static String EMPTY = " ";
+
+    private Icon redDiscIcon;
+    private Icon yellowDiscIcon;
 
     // A 2D array of JButton objects, representing the Connect Four grid.
     private JButton[][] _board;
@@ -32,7 +45,9 @@ public class ConnectFour extends JPanel {
     private RedPlayerTurn redPlayer;
     private YellowPlayerTurn yellowPlayer;
     private GameStatus status;
-    JLabel statusLabel;
+
+    private JLabel statusLabel;
+    private JButton newGameButton;
 
     private GameSubject subject = new GameSubject();
 
@@ -40,24 +55,41 @@ public class ConnectFour extends JPanel {
         redPlayer = new RedPlayerTurn(this);
         yellowPlayer = new YellowPlayerTurn(this);
         status = GameStatus.RED_TURN;
-        statusLabel = new JLabel("Starting a new game.");        
+
         // Build the GUI.
+        setLayout(new BorderLayout());
         buildGUI();
 
         subject.addObserver(new StatusObserver(statusLabel));
+        subject.addObserver(new ConsoleObserver());
     }
 
     private void buildGUI() {
         // Initialize the board.
         _board = new JButton[ROWS][COLS];
-        JPanel panel = new JPanel(new GridLayout(ROWS, COLS));
-        panel.setPreferredSize(new Dimension(COLS * 100, ROWS * 100));
-        panel.setBackground(Color.WHITE);
+        JPanel boardPanel = new JPanel(new GridLayout(ROWS, COLS));
+        boardPanel.setPreferredSize(new Dimension(COLS * 100, ROWS * 100));
+        boardPanel.setBackground(Color.WHITE);
+
+        try {
+            redDiscIcon = new ImageIcon(getClass().getResource("./resources/red_disc.png"));
+        } catch (Exception e) {
+            System.err.println("Red Icon not loaded");
+        }
+        
+        try {
+            yellowDiscIcon = new ImageIcon(getClass().getResource("./resources/yellow_disc.png"));
+        } catch (Exception e) {
+            System.err.println("Yellow Icon not loaded");
+        }
 
         for(int row = 0; row < ROWS; row++) {
             for(int col = 0; col < COLS; col++) {
-                JButton btn = new JButton(BLANK);
+                JButton btn = new JButton();
                 btn.setBackground(Color.LIGHT_GRAY);
+                //btn.setForeground(new Color(0, 0, 0, 0));
+                btn.putClientProperty("state", EMPTY);
+                btn.setIcon(null);
                 final int selectedColumn = col;
                 btn.addActionListener(new ActionListener() {
                     @Override
@@ -66,12 +98,35 @@ public class ConnectFour extends JPanel {
                     }
                 });
                 _board[row][col] = btn;
-                panel.add(btn);
+                boardPanel.add(btn);
             }
         }
+        
+        //Bottom-Left text for displaying game status
+        statusLabel = new JLabel("Game start!");
+        statusLabel.setPreferredSize(new Dimension(COLS * 100, 30));
+        statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); 
+        statusLabel.setFont(CONTROL_FONT);
+        statusLabel.setForeground(Color.DARK_GRAY);
 
-        add(panel, BorderLayout.CENTER);
-        add(statusLabel, BorderLayout.SOUTH);
+        //Bottom-Right button to reset the game state
+        newGameButton = new JButton("New Game");
+        newGameButton.setPreferredSize(new Dimension(140, 40));
+        newGameButton.setMargin(new Insets(10, 20, 10, 20));
+        newGameButton.setFont(CONTROL_FONT);
+        newGameButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                resetGame();
+            }
+        });
+
+        JPanel controlPanel = new JPanel(new BorderLayout());
+        controlPanel.add(statusLabel, BorderLayout.CENTER);
+        controlPanel.add(newGameButton, BorderLayout.EAST);
+
+        add(boardPanel, BorderLayout.CENTER);
+        add(controlPanel, BorderLayout.SOUTH);
     }
 
     public JButton getCell(int row, int col) {
@@ -94,6 +149,19 @@ public class ConnectFour extends JPanel {
         }
     }
 
+    //Game state is reset by clearing board and setting turn to Red
+    private void resetGame() {
+        for(int row = 0; row < ROWS; row++) {
+            for(int col = 0; col < COLS; col++) {
+                JButton btn = _board[row][col];
+                btn.putClientProperty("state", EMPTY);
+                btn.setIcon(null);
+            }
+        }
+        status = GameStatus.RED_TURN;
+        subject.notifyObservers(status);
+    }
+
     public void updateStatus() {
         status = getGameStatus();
         subject.notifyObservers(status);
@@ -103,9 +171,6 @@ public class ConnectFour extends JPanel {
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                // TODO: Create and configure a JFrame to display the GUI.
-                // Make class ConnectFour extend JPanel so that a
-                // ConnectFour object can be added to the JFrame.
                 JFrame frame = new JFrame("Connect Four");
                 ConnectFour gamePanel = new ConnectFour();
 
@@ -113,6 +178,7 @@ public class ConnectFour extends JPanel {
                 frame.add(gamePanel, BorderLayout.CENTER);
                 frame.pack();
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setResizable(false);
                 frame.setVisible(true);
             }
         });
@@ -126,10 +192,10 @@ public class ConnectFour extends JPanel {
         for(int row = 0; row < ROWS; row++) {
             for(int col = 0; col <= COLS - 4; col++) {
                 lines.add(new LineComposite(Arrays.asList(
-                    new Cell(_board[row][col].getText()),
-                    new Cell(_board[row][col+1].getText()),
-                    new Cell(_board[row][col+2].getText()),
-                    new Cell(_board[row][col+3].getText())
+                    new Cell(_board[row][col].getClientProperty("state")),
+                    new Cell(_board[row][col+1].getClientProperty("state")),
+                    new Cell(_board[row][col+2].getClientProperty("state")),
+                    new Cell(_board[row][col+3].getClientProperty("state"))
                 )));    
             }
         }
@@ -138,10 +204,10 @@ public class ConnectFour extends JPanel {
         for(int col = 0; col < COLS; col++) {
             for(int row = 0; row <= ROWS - 4; row++) {
                 lines.add(new LineComposite(Arrays.asList(
-                    new Cell(_board[row][col].getText()),
-                    new Cell(_board[row+1][col].getText()),
-                    new Cell(_board[row+2][col].getText()),
-                    new Cell(_board[row+3][col].getText())
+                    new Cell(_board[row][col].getClientProperty("state")),
+                    new Cell(_board[row+1][col].getClientProperty("state")),
+                    new Cell(_board[row+2][col].getClientProperty("state")),
+                    new Cell(_board[row+3][col].getClientProperty("state"))
                 )));  
             }
         }
@@ -150,10 +216,10 @@ public class ConnectFour extends JPanel {
         for(int row = 0; row <= ROWS - 4; row++) {
             for(int col = 0; col <= COLS - 4; col++) {
                     lines.add(new LineComposite(Arrays.asList(
-                    new Cell(_board[row][col].getText()),
-                    new Cell(_board[row + 1][col + 1].getText()),
-                    new Cell(_board[row + 2][col + 2].getText()),
-                    new Cell(_board[row + 3][col + 3].getText())
+                    new Cell(_board[row][col].getClientProperty("state")),
+                    new Cell(_board[row + 1][col + 1].getClientProperty("state")),
+                    new Cell(_board[row + 2][col + 2].getClientProperty("state")),
+                    new Cell(_board[row + 3][col + 3].getClientProperty("state"))
                 )));
             }
         }
@@ -162,10 +228,10 @@ public class ConnectFour extends JPanel {
         for(int row = 3; row < ROWS; row++) {
             for(int col = 0; col <= COLS - 4; col++) {
                     lines.add(new LineComposite(Arrays.asList(
-                    new Cell(_board[row][col].getText()),
-                    new Cell(_board[row - 1][col + 1].getText()),
-                    new Cell(_board[row - 2][col + 2].getText()),
-                    new Cell(_board[row - 3][col + 3].getText())
+                    new Cell(_board[row][col].getClientProperty("state")),
+                    new Cell(_board[row - 1][col + 1].getClientProperty("state")),
+                    new Cell(_board[row - 2][col + 2].getClientProperty("state")),
+                    new Cell(_board[row - 3][col + 3].getClientProperty("state"))
                 )));
             }
         }
@@ -173,14 +239,14 @@ public class ConnectFour extends JPanel {
         //Check for a winning line
         for (LineComposite line : lines) {
             if (line.checkWin()) {
-                String winner = line.getFirstValue();
+                Object winner = line.getFirstValue();
                 return winner.equals(RED) ? GameStatus.RED_WON : GameStatus.YELLOW_WON;
             }
         }
 
         //Check if board is full
         for (int col = 0; col < COLS; col++) {
-            if (_board[0][col].getText().equals(BLANK)) {
+            if (_board[0][col].getClientProperty("state").equals(EMPTY)) {
                 return status;
             }
         }
@@ -188,18 +254,23 @@ public class ConnectFour extends JPanel {
         return GameStatus.DRAW;
     }
 
+    /**
+     * COMPOSITE PATTERN: Individual cells and lines are treated uniformly by implementing GameComponent Interface
+     * checkWin() method returns false for leaves and for the composite checks if all children have the same value
+     * Cell value set to ClientProperty of corresponding JButton
+     */
     interface GameComponent {
         boolean checkWin();
     }
 
     class Cell implements GameComponent {
-        private String value;
+        private Object value;
 
-        public Cell(String value) {
+        public Cell(Object value) {
             this.value = value;
         }
 
-        public String getValue() {
+        public Object getValue() {
             return value;
         }
 
@@ -218,8 +289,8 @@ public class ConnectFour extends JPanel {
         }
 
         public boolean checkWin() {
-            String first = components.get(0).getValue();
-            if (first.equals(" ")) {
+            Object first = components.get(0).getValue();
+            if (first.equals(EMPTY)) {
                 return false;
             }
 
@@ -232,10 +303,16 @@ public class ConnectFour extends JPanel {
             return true;
         }
 
-        public String getFirstValue() {
+        public Object getFirstValue() {
             return components.get(0).getValue();
         }
     }
+
+    /**
+     * TEMPLATE PATTERN: Abstract PlayerTurn provides template alogorithm for individual player turns. 
+     * RedPlayerTurn and YellowPlayer turn extend the base class with specific implementations
+     * Could be used to make a ComputerPlayer
+     */
 
     abstract class PlayerTurn {
         protected int selectedColumn;
@@ -269,9 +346,9 @@ public class ConnectFour extends JPanel {
         protected boolean dropDisc() {
             for (int row = ConnectFour.ROWS - 1; row >= 0; row--) {
                 JButton cell = game.getCell(row, selectedColumn);
-                if (cell.getBackground().equals(Color.LIGHT_GRAY)) {
-                    cell.setBackground(Color.RED);
-                    cell.setText(ConnectFour.RED);
+                if (cell.getClientProperty("state").equals(EMPTY)) {
+                    cell.putClientProperty("state", RED);
+                    cell.setIcon(redDiscIcon);
                     return true;
                 }
             }
@@ -291,9 +368,9 @@ public class ConnectFour extends JPanel {
         protected boolean dropDisc() {
             for (int row = ConnectFour.ROWS - 1; row >= 0; row--) {
                 JButton cell = game.getCell(row, selectedColumn);
-                if (cell.getBackground().equals(Color.LIGHT_GRAY)) {
-                    cell.setBackground(Color.YELLOW);
-                    cell.setText(ConnectFour.YELLOW);
+                if (cell.getClientProperty("state").equals(EMPTY)) {
+                    cell.putClientProperty("state", YELLOW);
+                    cell.setIcon(yellowDiscIcon);
                     return true;
                 }
             }
@@ -305,6 +382,10 @@ public class ConnectFour extends JPanel {
         }
     }
 
+    /**
+     *  OBSERVER PATTERN: GameSubject manages a list of observers and notifies them when the game status changes
+     *  The GameObserver interface is implemented by different concrete observers
+     */
     interface GameObserver {
         void update(GameStatus status);
     }
@@ -351,6 +432,12 @@ public class ConnectFour extends JPanel {
                     statusLabel.setText("Invalid Status!");
                     break;
             }
+        }
+    }
+
+    class ConsoleObserver implements GameObserver {
+        public void update(GameStatus status) {
+            System.out.println("Game status updated to " + status);
         }
     }
 }
